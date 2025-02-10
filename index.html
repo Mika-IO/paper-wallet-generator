@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paper Wallet Bitcoin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        .text-primary { color: #F7931A; }
+        .bg-primary { background-color: #F7931A; }
+        .border-primary { border-color: #F7931A; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body class="bg-white text-gray-900">
+    <nav class="w-full bg-white shadow-md py-4">
+        <div class="max-w-4xl mx-auto px-4">
+            <div class="flex justify-between items-center">
+                <a class="text-center" href="index.html">
+                    <div class="flex items-center space-x-2">
+                        <img src="icon.png" alt="Logo PixBitcoin" class="h-8 w-8">
+                        <h1 class="text-2xl font-bold text-primary">pixbitcoin.org</h1>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="p-8 pb-40 max-w-screen-sm min-h-screen mx-auto pb-40">
+        <p class="mt-30"></p>
+        <h2 class="text-xl font-bold text-primary text-center">Gerador de Paper Wallet Bitcoin</h2>
+        <p class="text-center text-gray-600 mb-4">Digite qualquer coisa para gerar entropia e criar sua wallet.</p>
+
+        <textarea id="entropiaInput" class="w-full p-2 border rounded-lg text-sm" placeholder="Digite qualquer coisa aqui... Mais de 10 Digitos! Garanta que seja aleatório!" rows="3"></textarea>
+
+        <button onclick="iniciarGeracao()" class="w-full bg-primary text-white font-bold py-2 px-4 rounded-lg mt-4 hover:bg-orange-600">
+            Gerar Paper Wallet
+        </button>
+
+        <div id="wallet-container" class="hidden mt-6 p-4 border border-gray-300 rounded-lg text-center">
+            <h3 class="text-lg font-bold text-gray-800">📌 Endereço Bitcoin (Público)</h3>
+            <p id="publicKey" class="break-words text-sm bg-gray-100 p-2 rounded"></p>
+            <div id="qrcodePublic" class="flex justify-center my-4"></div>
+
+            <h3 class="text-lg font-bold text-gray-800 mt-4">🔑 Chave Privada</h3>
+            <p id="privateKey" class="break-words text-sm bg-gray-100 p-2 rounded"></p>
+            <div id="qrcodePrivate" class="flex justify-center my-4"></div>
+
+           
+        </div>
+        <button id="imprimir" onclick="imprimirWallet()" class="w-full hidden bg-gray-700 text-white font-bold py-2 px-4 rounded-lg mt-4 hover:bg-gray-800">
+            📄 Imprimir Paper Wallet
+        </button>
+    </main>
+
+    <script>
+        async function iniciarGeracao() {
+            const entropia = document.getElementById("entropiaInput").value.trim();
+            if (entropia.length < 10) {
+                alert("Digite mais caracteres para gerar entropia!");
+                return;
+            }
+
+            await gerarWallet(entropia);
+        }
+
+        async function gerarWallet(entropia) {
+            const privateKeyHex = (await sha256(entropia)).substr(0, 64).padEnd(64, '0');
+            const privateKeyWIF = await convertToWIF(privateKeyHex);
+            const publicKey = "1" + (await sha256(privateKeyHex)).substr(0, 33);
+
+            document.getElementById("publicKey").innerText = publicKey;
+            document.getElementById("privateKey").innerText = privateKeyWIF;
+
+            document.getElementById("qrcodePublic").innerHTML = "";
+            document.getElementById("qrcodePrivate").innerHTML = "";
+
+            new QRCode(document.getElementById("qrcodePublic"), { text: publicKey, width: 128, height: 128 });
+            new QRCode(document.getElementById("qrcodePrivate"), { text: privateKeyWIF, width: 128, height: 128 });
+
+            document.getElementById("wallet-container").classList.remove("hidden");
+            document.getElementById("imprimir").classList.remove("hidden");
+        }
+
+        async function convertToWIF(privateKeyHex) {
+            const version = "80";
+            const keyWithVersion = version + privateKeyHex;
+            const checksum = (await sha256(await sha256(keyWithVersion))).substr(0, 8);
+            const finalKey = keyWithVersion + checksum;
+            return base58Encode(hexToBytes(finalKey));
+        }
+
+        async function sha256(data) {
+            const hashBuffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(data));
+            return Array.from(new Uint8Array(hashBuffer)).map(byte => byte.toString(16).padStart(2, '0')).join('');
+        }
+
+        function hexToBytes(hex) {
+            const bytes = [];
+            for (let i = 0; i < hex.length; i += 2) {
+                bytes.push(parseInt(hex.substr(i, 2), 16));
+            }
+            return bytes;
+        }
+
+        function base58Encode(bytes) {
+            const alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+            let num = BigInt("0x" + bytes.map(b => b.toString(16).padStart(2, '0')).join(''));
+            let encoded = "";
+            while (num > 0) {
+                const remainder = num % 58n;
+                num = num / 58n;
+                encoded = alphabet[Number(remainder)] + encoded;
+            }
+            return encoded;
+        }
+
+        function imprimirWallet() {
+            const nav = document.querySelector("nav").outerHTML;
+            const walletContainer = document.getElementById("wallet-container").outerHTML;
+            const originalContent = document.body.innerHTML;
+
+            document.body.innerHTML = nav + walletContainer;
+            window.print();
+            document.body.innerHTML = originalContent;
+        }
+
+
+    </script>
+</body>
+</html>
