@@ -20,16 +20,17 @@
                 <a class="text-center" href="index.html">
                     <div class="flex items-center space-x-2">
                         <img src="icon.png" alt="Logo PixBitcoin" class="h-8 w-8">
-                        <h1 class="text-2xl font-bold text-primary">pixbitcoin.org Paper Wallet Generator</h1>
+                        <h1 class="text-2xl font-bold text-primary">pixbitcoin.org</h1>
                     </div>
                 </a>
             </div>
         </div>
     </nav>
 
-    <main class="p-8 pb-40 max-w-screen-sm min-h-screen mx-auto pb-40">
+    <main class="max-w-screen-sm mx-auto">
         <p class="mt-30"></p>
-        <p class="text-center text-gray-600 mb-4">Digite qualquer coisa para gerar entropia e criar sua wallet.</p>
+        <h2 class="text-primary text-2xl text-center mt-5 mb-5">Crie sua Paper Wallet</h2>
+        <p class="text-center text-gray-600 mb-4">Digite qualquer coisa para gerar entropia e criar sua carteira Bitcoin.</p>
 
         <textarea id="entropiaInput" class="w-full p-2 border rounded-lg text-sm" placeholder="Digite qualquer coisa aqui... Mais de 10 Digitos! Garanta que seja aleatório!" rows="3"></textarea>
 
@@ -51,17 +52,50 @@
         <button id="imprimir" onclick="imprimirWallet()" class="w-full hidden bg-gray-700 text-white font-bold py-2 px-4 rounded-lg mt-4 hover:bg-gray-800">
             📄 Imprimir Paper Wallet
         </button>
+        <div class="bg-gray-100 border-l-4 border-orange-500 p-4 rounded-md shadow-md mx-auto pb-40 mt-10">
+            <h2 class="text-xl font-semibold text-gray-800 mb-3">🔒 Recomendações de segurança</h2>
+            <ul class="list-disc pl-5 text-gray-700 space-y-2">
+                <li>🖥️ Carregue o site e desligue a internet ou baixe e use localmente.</li>
+                <li>🧹 Use um sistema limpo. Prefira um sistema "live" (ex: Ubuntu Live USB).</li>
+                <li>🖨️ Não use impressoras conectadas à rede.</li>
+                <li>📄 Armazene cópias em locais seguros e protegidos.</li>
+                <li>🔥 Proteja sua cópia. Plastifique as cópias</li>
+                <li>🔑 Não compartilhe, sua chave privada deve ser secreta.</li>
+                <li>🚀 Use apenas uma vez e após gastar BTC, crie uma nova carteira.</li>
+            </ul>
+        </div>
     </main>
-
+    
     <script>
         async function iniciarGeracao() {
-            const entropia = document.getElementById("entropiaInput").value.trim();
+            let entropia = document.getElementById("entropiaInput").value.trim();
             if (entropia.length < 10) {
                 alert("Digite mais caracteres para gerar entropia!");
                 return;
             }
 
-            await gerarWallet(entropia);
+            // Adicionar entropia aleatória
+            const timestamp = Date.now();
+            let randomFactor = Math.floor(Math.random() * 1000000) + 1; // Número aleatório entre 1 e 1000
+
+            // Transformar a entrada
+            let entropiaNumerica = entropia
+                .split('')
+                .map(char => (char.charCodeAt(0) * randomFactor) + timestamp)
+                .join('');
+
+            console.log("Entropia Numérica:", entropiaNumerica); // Debug
+
+            // Converter de volta para texto (pegando cada par de números e convertendo para char)
+            let entropiaTexto = entropiaNumerica
+                .match(/.{1,2}/g) // Separa a string em pares de números
+                .map(num => String.fromCharCode(parseInt(num) % 255)) // Garante que fique dentro da faixa de caracteres ASCII
+                .join('');
+
+            console.log("Entropia Convertida de Volta:", entropiaTexto); // Debug
+
+            // Chamar a função para gerar a carteira com a entropia processada
+            await gerarWallet(entropiaTexto);
         }
 
         async function gerarWallet(entropia) {
